@@ -1,10 +1,12 @@
 import express from "express";
 import {userRouter} from "./routes/user.routes"
 import { eventRouter } from "./routes/event.routes";
+import cors from "cors"
 
 const PORT = 3001;
 
 const app = express();
+app.use(cors());
 
 app.use(express.static('upload'));
 
@@ -16,7 +18,7 @@ app.use('/event', eventRouter);
 
 app.use('*',(req, res)=>{
     res.status(200).json({
-        message: "Hello"
+        message: "This route is not defined"
     })
 })
 

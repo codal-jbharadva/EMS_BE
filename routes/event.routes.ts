@@ -6,7 +6,11 @@ import { AuthorizeAdmin, userAuth } from "../services/authService";
 import { upload } from "../middleware/upload";
 export const eventRouter = Router();
 
-eventRouter.post('/add', userAuth, AuthorizeAdmin, upload.array('photos'), addEvent);
+// eventRouter.post('/add', userAuth, AuthorizeAdmin, upload.array('photos'), addEvent);
+eventRouter.post('/add', userAuth, AuthorizeAdmin, upload.fields([
+    { name: 'header_image', maxCount: 1 },
+    { name: 'images', maxCount: 10 }
+  ]), addEvent);
 eventRouter.get('/',getAllEvents);
 eventRouter.get('/:id',getEventByID)
 eventRouter.post('/update/:id',updateEvent);

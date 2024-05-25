@@ -13,7 +13,6 @@ export const uploadToGoogleDrive = async (file:any, filename:string) => {
       mimeType: file.mimetype,
       body: fs.createReadStream(file.path),
     };
-    console.log("called")
   
     const driveService = google.drive({ version: "v3", auth });
   
@@ -22,6 +21,5 @@ export const uploadToGoogleDrive = async (file:any, filename:string) => {
       media: media,
       fields: "id, webViewLink",
     });
-    console.log(p);
     return p;
   };

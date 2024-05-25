@@ -16,8 +16,8 @@ interface user {
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 
 export async function userLogin(req: Request, res: Response) {
+    console.log("login")
     const { email, password } = req.body;
-    console.log(email)
     if (!email || !password) {
         return handleResponse(res, "Email and password are required", 400);
     }
