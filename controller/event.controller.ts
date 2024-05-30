@@ -8,51 +8,61 @@ interface Event {
     start_date: Date;
     end_date: Date,
     registration_fee: string;
-    description: string,
+    details: string,
     completed: boolean,
     tagline: string,
     header_img: string,
     address:string,
+    type: string,
 }
 import { uploadToGoogleDrive } from "../utils/uploadToGoogleDrive";
+import { uploadFile } from "../services/cloudinaryUploadservice";
+
+
+function convertToArray(str : String){
+    return str.split(',');
+}
 
 export async function addEvent(req: CustomRequest, res: Response) {
+    console.log("addvent is caaled")
     const body = req.body as Event;
     const admin_id = req.id;
-    const files = req.files as { images: Express.Multer.File[], header_image: Express.Multer.File[] };
-
-    console.log(files);
+    const files = req.files as { images: Express.Multer.File[], header_image: Express.Multer.File[] }
 
     try {
         // Prepare promises for uploading header image and event images
         const headerImageFile = files.header_image[0];
         const headerImageFilename = `header_image.png`;
-        const headerImageUploadPromise = uploadToGoogleDrive(headerImageFile, headerImageFilename);
+        // const headerImageUploadPromise = uploadToGoogleDrive(headerImageFile, headerImageFilename);
+        let headerImageUploadPromise ;
+        if(headerImageFile){
+            headerImageUploadPromise = uploadFile(files.header_image[0].path);
+        }
 
         const eventImageUploadPromises: Promise<any>[] = files.images.map((file, index) => {
-            const filename = `image_${index}.png`;
-            return uploadToGoogleDrive(file, filename);
+            // const filename = `image_${index}.png`;
+            return uploadFile(file.path);
         });
 
         // Execute all upload promises in parallel
         const [headerImageResponse, ...googleDriveResponses] = await Promise.all([headerImageUploadPromise, ...eventImageUploadPromises]);
 
         const headerImageLink = {
-            filename: headerImageResponse.data.id,
-            webViewLink: headerImageResponse.data.webViewLink,
+            webViewLink: headerImageResponse?.secure_url,
         };
 
         const eventImageLinks = googleDriveResponses.map((response) => {
+            console.log(response);
             return {
-                filename: response.data.id,
-                webViewLink: response.data.webViewLink,
+                filename: response.original_filename,
+                webViewLink: response?.secure_url,
             };
         });
 
         // Insert event details into the event table
         const result = await db.execute(
-            "INSERT INTO event (address, name, place, start_date, end_date, registration_fee, description, admin_id, header_img, tagline) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [body.address, body.name, body.place, body.start_date, body.end_date, body.registration_fee, body.description, admin_id, headerImageLink.webViewLink, body.tagline]
+            "INSERT INTO event (address, name, place, start_date, end_date, registration_fee, description, admin_id, header_img, tagline,type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [body.address, body.name, body.place, body.start_date, body.end_date, body.registration_fee, body.details, admin_id, headerImageLink.webViewLink, body.tagline, body.type]
         );
         const eventId = result[0].insertId;
 
@@ -65,6 +75,7 @@ export async function addEvent(req: CustomRequest, res: Response) {
         });
 
         await Promise.all(insertImagePromises);
+        console.log("returning")
 
         return handleResponse(res, "Event Added Successfully", 201);
     } catch (error) {
@@ -116,7 +127,7 @@ export async function getEventByID(req: Request, res: Response) {
     db.execute(
         "SELECT * FROM event WHERE id = ?",
         [event_id]
-    )
+    )   
     .then((result: any) => {
         if (result[0].length === 0) {
             return handleResponse(res, "Event not found", 404);
@@ -130,6 +141,8 @@ export async function getEventByID(req: Request, res: Response) {
 }
 
 export async function getAllEvents(req: Request, res: Response) {
+    const {day, eventtype} = req.query;
+
     db.execute(
         "SELECT * FROM event"
     )

@@ -12,10 +12,9 @@ export const userAuth = (req: CustomRequest, res: Response, next:NextFunction)=>
         if(!token){
             return handleResponse(res, "unAuthorized User", 401)
         }
-        const decodedToken = jwt.verify(token, secretKey as string) as {id: number, role:string}
-        console.log(decodedToken)
+        const decodedToken = jwt.verify(token, secretKey as string) as {id: number, isAdmin:boolean}
         req.id = decodedToken.id;
-        req.role = decodedToken.role;
+        req.role = decodedToken.isAdmin ? "admin": "user"; 
         next()
     }
     catch{

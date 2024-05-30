@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { CustomRequest, handleResponse } from "../utils/utils";
 import bcrypt from "bcryptjs";
+import { uploadFile } from "../services/cloudinaryUploadservice";
 require("dotenv").config();
 const db = require('../utils/database');
 const jwt = require("jsonwebtoken");
@@ -39,7 +40,7 @@ export async function userLogin(req: Request, res: Response) {
 
         // Generate JWT token
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role},
+            { id: user.id, name: user.name, email: user.email, isAdmin: user.role === "user" ? false: true},
             JWT_SECRET,
             { expiresIn: "1h" } 
         );
@@ -53,16 +54,22 @@ export async function userLogin(req: Request, res: Response) {
 
 export async function addUser(req:Request, res:Response){
     const body = req.body as user;
+    console.log(req.file);
+    console.log(body)
     if (!body.password) {
         return handleResponse(res, "Password is required", 400);
     }
     try {
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(body.password, saltRounds);
+        let response;
+        if(req.file){
+            response = await uploadFile(req.file.path)
+        }
 
         db.execute(
-            "INSERT INTO user (name, email, password,number, role) VALUES (?, ?, ?, ?, ?)",
-            [body.name, body.email, hashedPassword, body.number, body.role]
+            "INSERT INTO user (name, email, profilePhoto, password,number, role) VALUES (?, ?, ?, ?, ?, ?)",
+            [body.name, body.email, response?.secure_url, hashedPassword, body.number, body.role]
         )
         .then((result: any) => {
             return handleResponse(res, "User Added Successfully", 201);
