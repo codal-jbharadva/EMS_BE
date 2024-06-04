@@ -3,7 +3,8 @@ import {userRouter} from "./routes/user.routes"
 import { eventRouter } from "./routes/event.routes";
 import cors from "cors"
 import { blogRouter } from "./routes/blog.routes";
-
+import "./services/cronFunction"
+import { registerRouter } from "./routes/register.routes";
 const PORT = 3001;
 
 const app = express();
@@ -17,6 +18,7 @@ app.use(express.urlencoded({extended: true}));
 app.use('/user', userRouter);
 app.use('/event', eventRouter);
 app.use('/blog',blogRouter);
+app.use('/',registerRouter);
 
 app.use('*',(req, res)=>{
     res.status(400).json({

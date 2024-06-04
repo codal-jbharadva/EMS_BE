@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { CustomRequest, handleResponse } from "../utils/utils";
+import moment from "moment";
 const db = require('../utils/database');
 require("dotenv").config();
 interface Event {
@@ -122,23 +123,39 @@ export async function deleteEvent(req: Request, res: Response) {
 }
 
 export async function getEventByID(req: Request, res: Response) {
-    const event_id = req.params.id;
-    console.log(event_id)
-    db.execute(
-        "SELECT * FROM event WHERE id = ?",
-        [event_id]
-    )   
-    .then((result: any) => {
-        if (result[0].length === 0) {
+    try {
+        const event_id = req.params.id;
+        console.log(event_id);
+
+        // Execute both queries concurrently
+        const [eventResult, imagesResult] = await Promise.all([
+            db.execute("SELECT * FROM event WHERE id = ?", [event_id]),
+            db.execute("SELECT url FROM event_images WHERE event_id = ?", [event_id])
+        ]);
+
+        // Extract data from results
+        const eventData = eventResult[0];
+        const imageUrls = imagesResult[0].map((row: any) => row.url);
+
+        // Check if the event exists
+        if (eventData.length === 0) {
             return handleResponse(res, "Event not found", 404);
         }
-        return handleResponse(res, "Event Found", 200, undefined, result[0][0], "data");
-    })
-    .catch((err: any) => {
+
+        // Merge event data with image URLs
+        const eventWithImages = {
+            ...eventData[0],
+            images: imageUrls
+        };
+
+        // Return the response with event data
+        return handleResponse(res, "Event Found", 200, undefined, eventWithImages, "data");
+    } catch (err) {
         console.error(err);
         return handleResponse(res, "Error fetching event", 500);
-    });
+    }
 }
+
 
 export async function getAllEvents(req: Request, res: Response) {
     const {day, eventtype} = req.query;
@@ -155,6 +172,35 @@ export async function getAllEvents(req: Request, res: Response) {
     });
 }
 
+export async function updateCompletedEvents() {
+    const currentDate = moment().format('YYYY-MM-DD');
+
+    try {
+        // Select events that have ended and are not marked as completed
+        const [events] = await db.execute(
+            "SELECT * FROM event WHERE end_date < ? AND completed = false",
+            [currentDate]
+        );
+        console.log(events);
+
+        // If there are events to update
+        if (events.length > 0) {
+            const eventIds = events.map((event: any) => event.id);
+            console.log(eventIds)
+            await db.execute(
+                `UPDATE event SET completed = 1 WHERE id IN (${eventIds.join(',')})`,
+                [eventIds]
+            );
+            console.log(`Updated ${eventIds.length} events to completed.`);
+        } else {
+            console.log('No events to update.');
+        }
+    } catch (error) {
+        console.error('Error updating events:', error);
+    }
+}
+
+
 export const getImages = (req: Request, res: Response)=>{
     const id = req.params.id;
     db.execute("select * from event_images where event_id = ?", [id])
@@ -164,3 +210,4 @@ export const getImages = (req: Request, res: Response)=>{
         console.log(err)
     });
 }
+

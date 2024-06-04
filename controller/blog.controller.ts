@@ -10,7 +10,9 @@ export async function addBlog(req: CustomRequest, res: Response) {
         const { title, slug, content,description} = req.body;
         const auther = req.id;
         const file = req.file as any;
-        console.log(file);
+        if(!title || !slug || !content || !description || !file){
+          return handleResponse(res, "Missing Data", 400);
+        }
 
         const headerImageFilename = file.originalname + Date.now();
         // const response = await uploadToGoogleDrive(file, headerImageFilename);

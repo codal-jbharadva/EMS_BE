@@ -42,7 +42,7 @@ export async function userLogin(req: Request, res: Response) {
         const token = jwt.sign(
             { id: user.id, name: user.name, email: user.email, isAdmin: user.role === "user" ? false: true},
             JWT_SECRET,
-            { expiresIn: "1h" } 
+            {} 
         );
 
         return handleResponse(res, "Login successful", 200, token);
@@ -113,7 +113,7 @@ export async function findUserByID(req:Request, res:Response){
         if(result[0].length === 0){
             return handleResponse(res, "User Not found",404);
         }
-        return handleResponse(res, "User Found", 200, undefined, result[0], "data");
+        return handleResponse(res, "User Found", 200, undefined, result[0][0], "data");
     }).catch((err:any) => {
         console.log(err);
     });
